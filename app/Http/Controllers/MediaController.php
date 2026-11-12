@@ -75,7 +75,7 @@ class MediaController extends Controller
     {
         $this->authorizeProperty($request, $property);
         abort_unless($request->user()->isAdmin(), 403);
-        abort_unless((int) $media->property_id === (int) $property->id && $media->media_type === 'image', 404);
+        abort_unless((int) $media->property_id === (int) $property->id && in_array($media->media_type, ['image', 'video']), 404);
 
         $storagePath = str_starts_with((string) $media->local_path, 'storage:')
             ? Str::after((string) $media->local_path, 'storage:') : null;
@@ -83,9 +83,10 @@ class MediaController extends Controller
         if ($storagePath && str_starts_with($storagePath, 'property-media/')) {
             Storage::disk('local')->delete($storagePath);
         }
-        ActivityLog::record('media.deleted', $property, "Xóa ảnh khỏi căn {$property->code}", ['media_key' => $media->getKey()]);
+        $mediaType = $media->media_type === 'video' ? 'video' : 'ảnh';
+        ActivityLog::record('media.deleted', $property, "Xóa $mediaType khỏi căn {$property->code}", ['media_key' => $media->getKey()]);
 
-        return back()->with('success', 'Đã xóa ảnh.');
+        return back()->with('success', "Đã xóa $mediaType.");
     }
 
     public function show(Request $request, Media $media)
