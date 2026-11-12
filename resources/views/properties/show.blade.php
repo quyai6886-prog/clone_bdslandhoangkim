@@ -44,6 +44,16 @@
                     @endif
                     </div>
                     @php($imageIndex++)
+                @elseif($media->media_type === 'video')
+                    <div class="media-entry">
+                    <video class="media-item media-video" controls preload="metadata" aria-label="Video {{ $property->code }}">
+                        <source src="{{ route('media.show', $media) }}" type="{{ $media->getVideoMimeType() }}">
+                        Trình duyệt của bạn không hỗ trợ video HTML5.
+                    </video>
+                    @if(auth()->user()->isAdmin())
+                        <form method="post" action="{{ route('properties.images.destroy', [$property, $media]) }}" onsubmit="return confirm('Xóa video này khỏi căn {{ $property->code }}?')">@csrf @method('DELETE')<button class="media-delete-button" type="submit" title="Xóa video" aria-label="Xóa video">×</button></form>
+                    @endif
+                    </div>
                 @else
                     <a class="media-item" href="{{ route('media.show', $media) }}" target="_blank" rel="noopener">
                         <div class="file-icon">▤</div>

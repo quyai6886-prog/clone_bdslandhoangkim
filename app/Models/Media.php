@@ -24,4 +24,24 @@ class Media extends Model
     {
         return $this->belongsTo(Property::class);
     }
+
+    public function getVideoMimeType(): string
+    {
+        if (!$this->local_path) {
+            return 'video/mp4';
+        }
+
+        $path = (string) $this->local_path;
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return match ($ext) {
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+            'mkv' => 'video/x-matroska',
+            default => 'video/mp4',
+        };
+    }
 }
+

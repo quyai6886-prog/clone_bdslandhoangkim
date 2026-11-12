@@ -37,25 +37,28 @@ class MediaController extends Controller
     {
         $this->authorizeProperty($request, $property);
         $request->validate([
-            'images' => ['required', 'array', 'min:1', 'max:20'],
-            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'media' => ['required', 'array', 'min:1', 'max:20'],
+            'media.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,mp4,webm,mov,avi,mkv', 'max:102400'],
         ], [
-            'images.required' => 'Vui lòng chọn ít nhất một ảnh.',
-            'images.max' => 'Mỗi lần chỉ được tải tối đa 20 ảnh.',
-            'images.*.image' => 'Tệp tải lên phải là hình ảnh.',
-            'images.*.max' => 'Mỗi ảnh không được vượt quá 10 MB.',
+            'media.required' => 'Vui lòng chọn ít nhất một tệp.',
+            'media.max' => 'Mỗi lần chỉ được tải tối đa 20 tệp.',
+            'media.*.mimes' => 'Tệp phải là hình ảnh (JPG, PNG, WebP) hoặc video (MP4, WebM, MOV, AVI, MKV).',
+            'media.*.max' => 'Mỗi tệp không được vượt quá 100 MB.',
         ]);
 
         $uploaded = [];
-        foreach ($request->file('images', []) as $image) {
+        foreach ($request->file('media', []) as $file) {
             $uuid = (string) Str::uuid();
-            $path = $image->storeAs("property-media/{$property->id}", $uuid.'.'.$image->extension(), 'local');
-            abort_unless($path, 500, 'Không thể lưu ảnh.');
+            $path = $file->storeAs("property-media/{$property->id}", $uuid.'.'.$file->extension(), 'local');
+            abort_unless($path, 500, 'Không thể lưu tệp.');
             $uploaded[] = $path;
+            
+            $mediaType = str_starts_with($file->getMimeType(), 'image/') ? 'image' : 'video';
+            
             Media::create([
                 'media_key' => 'upload-'.$uuid,
                 'property_id' => $property->id,
-                'media_type' => 'image',
+                'media_type' => $mediaType,
                 'source_id' => 'upload-'.$uuid,
                 'source_url' => null,
                 'local_path' => 'storage:'.$path,
@@ -63,9 +66,9 @@ class MediaController extends Controller
             ]);
         }
 
-        ActivityLog::record('media.uploaded', $property, 'Tải '.count($uploaded)." ảnh lên căn {$property->code}", ['paths' => $uploaded]);
+        ActivityLog::record('media.uploaded', $property, 'Tải '.count($uploaded)." tệp lên căn {$property->code}", ['paths' => $uploaded]);
 
-        return back()->with('success', 'Đã tải lên '.count($uploaded).' ảnh.');
+        return back()->with('success', 'Đã tải lên '.count($uploaded).' tệp.');
     }
 
     public function destroy(Request $request, Property $property, Media $media)
