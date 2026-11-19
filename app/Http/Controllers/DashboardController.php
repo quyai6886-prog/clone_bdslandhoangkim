@@ -13,6 +13,7 @@ class DashboardController extends Controller
     {
         $query = Property::query()->select(Property::COLUMNS)->visibleTo($request->user())
             ->with(['project', 'firstImage', 'latestSaleNote', 'latestRentNote', 'customers'])
+            ->withExists(['media as has_video' => fn (Builder $media) => $media->where('media_type', 'video')])
             ->orderByDesc('id');
 
         $query->when($request->filled('q'), function (Builder $q) use ($request) {

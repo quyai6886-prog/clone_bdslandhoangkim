@@ -72,6 +72,30 @@ class CrmAccessTest extends TestCase
         $this->actingAs($viewer)->get(route('properties.show', $denied))->assertForbidden();
     }
 
+    public function test_dashboard_gallery_lists_video_even_when_property_has_no_image(): void
+    {
+        $viewer = User::factory()->create(['password' => 'password', 'role' => 'viewer', 'is_active' => true]);
+        $property = Property::firstOrFail();
+        $viewer->properties()->attach($property->id);
+        $property->media()->whereIn('media_type', ['image', 'video'])->delete();
+        $key = 'test-'.Str::uuid();
+        $video = $property->media()->create([
+            'media_key' => $key,
+            'media_type' => 'video',
+            'source_id' => $key,
+            'local_path' => 'storage:property-media/test.mp4',
+            'download_status' => 'uploaded',
+        ]);
+
+        $this->actingAs($viewer)->get(route('dashboard'))
+            ->assertOk()->assertSee('Xem video căn '.$property->code);
+        $this->getJson(route('properties.images', $property))->assertOk()->assertExactJson([
+            'property' => $property->code,
+            'images' => [],
+            'videos' => [['src' => route('media.show', $video)]],
+        ]);
+    }
+
     public function test_manager_cannot_move_property_to_unassigned_project(): void
     {
         $manager = User::factory()->create(['password' => 'password', 'role' => 'manager', 'is_active' => true]);

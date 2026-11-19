@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const gallery = document.querySelector('[data-gallery-modal]');
     const galleryItems = [...document.querySelectorAll('[data-gallery-item]')];
     const galleryImage = gallery?.querySelector('[data-gallery-image]');
+    const galleryVideo = gallery?.querySelector('[data-gallery-video]');
+    const galleryVideoError = gallery?.querySelector('[data-gallery-video-error]');
     const galleryCounter = gallery?.querySelector('[data-gallery-counter]');
     const galleryProperty = gallery?.querySelector('[data-gallery-property]');
     const galleryDownload = gallery?.querySelector('[data-gallery-download]');
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const customerModal = document.querySelector('[data-customer-modal]');
     const customerForm = customerModal?.querySelector('[data-customer-form]');
     const customerPropertyCode = customerModal?.querySelector('[data-customer-property-code]');
-    let currentImage = 0;
+    let currentMedia = 0;
     let previousQuickReason = '';
 
     const syncBodyLock = () => {
@@ -57,22 +59,44 @@ document.addEventListener('DOMContentLoaded', () => {
         syncBodyLock();
     };
 
-    const renderImage = index => {
+    const clearGalleryVideo = () => {
+        if (!galleryVideo?.hasAttribute('src')) return;
+        galleryVideo.pause();
+        galleryVideo.removeAttribute('src');
+        galleryVideo.load();
+    };
+    const renderMedia = index => {
         if (!galleryItems.length || !galleryImage) return;
-        currentImage = (index + galleryItems.length) % galleryItems.length;
-        const item = galleryItems[currentImage];
+        currentMedia = (index + galleryItems.length) % galleryItems.length;
+        const item = galleryItems[currentMedia];
         const source = item.dataset?.gallerySrc || item.src;
-        galleryImage.src = source;
-        if (galleryDownload) galleryDownload.href = source;
+        const isVideo = Boolean(galleryVideo && item.isVideo);
+        const mediaLabel = isVideo ? 'video' : 'ảnh';
+        galleryImage.hidden = isVideo;
+        if (!isVideo) galleryImage.src = source;
+        if (galleryVideo) {
+            galleryVideo.hidden = !isVideo;
+            galleryVideoError.hidden = true;
+            if (isVideo) {
+                galleryVideo.src = source;
+            } else {
+                clearGalleryVideo();
+            }
+        }
+        if (galleryDownload) {
+            galleryDownload.href = source;
+            galleryDownload.textContent = `⇩ Tải ${mediaLabel}`;
+        }
         if (galleryDeleteForm) {
             galleryDeleteForm.action = item.delete_url || '';
             galleryDeleteForm.hidden = !item.delete_url;
+            galleryDeleteForm.querySelector('button').textContent = `Xóa ${mediaLabel}`;
         }
-        if (galleryCounter) galleryCounter.textContent = `${currentImage + 1} / ${galleryItems.length}`;
+        if (galleryCounter) galleryCounter.textContent = `${currentMedia + 1} / ${galleryItems.length}`;
     };
     const openGallery = index => {
         if (!gallery) return;
-        renderImage(index);
+        renderMedia(index);
         gallery.classList.add('open');
         gallery.setAttribute('aria-hidden', 'false');
         syncBodyLock();
@@ -82,7 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gallery) return;
         gallery.classList.remove('open');
         gallery.setAttribute('aria-hidden', 'true');
-        if (galleryImage) galleryImage.src = '';
+        galleryImage?.removeAttribute('src');
+        clearGalleryVideo();
         syncBodyLock();
     };
 
@@ -186,19 +211,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(button.dataset.galleryUrl, { headers: { Accept: 'application/json' } });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const payload = await response.json();
-            galleryItems.splice(0, galleryItems.length, ...(payload.images || []));
-            if (!galleryItems.length) throw new Error('Không có ảnh');
+            const videos = (payload.videos || []).map(video => ({ ...video, isVideo: true }));
+            galleryItems.splice(0, galleryItems.length, ...videos, ...(payload.images || []));
+            if (!galleryItems.length) throw new Error('Không có ảnh hoặc video');
             if (galleryProperty) galleryProperty.textContent = payload.property || button.dataset.propertyCode || '';
             openGallery(0);
         } catch (error) {
-            window.alert('Không thể tải hình ảnh của căn này. Vui lòng thử lại.');
+            window.alert('Không thể tải ảnh hoặc video của căn này. Vui lòng thử lại.');
         } finally {
             button.disabled = false;
         }
     }));
     gallery?.querySelector('[data-gallery-close]')?.addEventListener('click', closeGallery);
-    gallery?.querySelector('[data-gallery-prev]')?.addEventListener('click', () => renderImage(currentImage - 1));
-    gallery?.querySelector('[data-gallery-next]')?.addEventListener('click', () => renderImage(currentImage + 1));
+    gallery?.querySelector('[data-gallery-prev]')?.addEventListener('click', () => renderMedia(currentMedia - 1));
+    gallery?.querySelector('[data-gallery-next]')?.addEventListener('click', () => renderMedia(currentMedia + 1));
+    galleryVideo?.addEventListener('error', () => {
+        if (!galleryVideo.hasAttribute('src')) return;
+        galleryVideo.hidden = true;
+        galleryVideoError.hidden = false;
+    });
     gallery?.addEventListener('click', event => {
         if (event.target === gallery) closeGallery();
     });
@@ -217,8 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', event => {
         if (gallery?.classList.contains('open')) {
             if (event.key === 'Escape') closeGallery();
-            if (event.key === 'ArrowLeft') renderImage(currentImage - 1);
-            if (event.key === 'ArrowRight') renderImage(currentImage + 1);
+            if (event.target === galleryVideo) return;
+            if (event.key === 'ArrowLeft') renderMedia(currentMedia - 1);
+            if (event.key === 'ArrowRight') renderMedia(currentMedia + 1);
             return;
         }
         if (notesViewModal?.classList.contains('open')) {

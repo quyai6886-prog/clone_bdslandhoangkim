@@ -13,10 +13,14 @@
 @forelse($properties as $property)
     <article class="property-card">
         <div class="property-image">
-            @if($property->firstImage)
-                <button class="dashboard-image-button" type="button" data-dashboard-gallery data-gallery-url="{{ route('properties.images', $property) }}" data-property-code="{{ $property->code }}" aria-label="Xem ảnh căn {{ $property->code }}">
-                    <img loading="lazy" src="{{ route('media.show', $property->firstImage) }}" alt="{{ $property->code }}">
-                    <span class="image-zoom-hint">⌕ Xem ảnh</span>
+            @if($property->firstImage || $property->has_video)
+                <button class="dashboard-image-button" type="button" data-dashboard-gallery data-gallery-url="{{ route('properties.images', $property) }}" data-property-code="{{ $property->code }}" aria-label="{{ $property->has_video ? 'Xem video' : 'Xem ảnh' }} căn {{ $property->code }}">
+                    @if($property->firstImage)
+                        <img loading="lazy" src="{{ route('media.show', $property->firstImage) }}" alt="{{ $property->code }}">
+                        <span class="image-zoom-hint">{{ $property->has_video ? '▶ Xem video' : '⌕ Xem ảnh' }}</span>
+                    @else
+                        <span>▶ Xem video</span>
+                    @endif
                 </button>
             @else<span>No image</span>@endif
         </div>
@@ -117,22 +121,27 @@
 </div>
 @endif
 
-<div class="gallery-modal dashboard-gallery-modal" data-gallery-modal data-dynamic-gallery aria-hidden="true" role="dialog" aria-modal="true" aria-label="Hình ảnh căn hộ">
+<div class="gallery-modal dashboard-gallery-modal" data-gallery-modal data-dynamic-gallery aria-hidden="true" role="dialog" aria-modal="true" aria-label="Ảnh và video căn hộ">
     <div class="dashboard-gallery-shell">
         <header class="dashboard-gallery-head">
-            <div><strong>Hình ảnh căn hộ</strong><small data-gallery-property></small></div>
+            <div><strong>Ảnh và video</strong><small data-gallery-property></small></div>
             <div class="dashboard-gallery-tools">
                 <a class="btn ghost gallery-download" data-gallery-download href="#" download>⇩ Tải ảnh</a>
                 @if(auth()->user()->isAdmin())
-                    <form method="post" action="" data-gallery-delete-form onsubmit="return confirm('Xóa ảnh đang xem?')">@csrf @method('DELETE')<button class="btn media-modal-delete" type="submit">Xóa ảnh</button></form>
+                    <form method="post" action="" data-gallery-delete-form onsubmit="return confirm('Xóa tệp đang xem?')">@csrf @method('DELETE')<button class="btn media-modal-delete" type="submit">Xóa ảnh</button></form>
                 @endif
                 <button class="gallery-head-close" type="button" data-gallery-close aria-label="Đóng">×</button>
             </div>
         </header>
         <div class="gallery-dialog">
-            <button class="gallery-nav gallery-prev" type="button" data-gallery-prev aria-label="Ảnh trước">‹</button>
-            <figure class="gallery-stage"><img data-gallery-image src="" alt="Hình ảnh căn hộ"><figcaption data-gallery-counter></figcaption></figure>
-            <button class="gallery-nav gallery-next" type="button" data-gallery-next aria-label="Ảnh tiếp theo">›</button>
+            <button class="gallery-nav gallery-prev" type="button" data-gallery-prev aria-label="Mục trước">‹</button>
+            <figure class="gallery-stage">
+                <img data-gallery-image alt="Hình ảnh căn hộ">
+                <video data-gallery-video controls playsinline preload="metadata" aria-label="Video căn hộ" hidden></video>
+                <p class="gallery-video-error" data-gallery-video-error role="status" hidden>Không thể phát video này trong trình duyệt.</p>
+                <figcaption data-gallery-counter></figcaption>
+            </figure>
+            <button class="gallery-nav gallery-next" type="button" data-gallery-next aria-label="Mục tiếp theo">›</button>
         </div>
     </div>
 </div>

@@ -21,16 +21,22 @@ class MediaController extends Controller
     {
         $this->authorizeProperty($request, $property);
 
-        $images = $property->media()
-            ->where('media_type', 'image')
+        $mediaByType = $property->media()
+            ->whereIn('media_type', ['image', 'video'])
             ->orderBy('source_id')
             ->get()
-            ->map(fn (Media $media) => array_filter([
-                'src' => route('media.show', $media),
-                'delete_url' => $request->user()->isAdmin() ? route('properties.images.destroy', [$property, $media]) : null,
-            ]));
+            ->groupBy('media_type');
+        $canDelete = $request->user()->isAdmin();
+        $galleryItem = fn (Media $media) => array_filter([
+            'src' => route('media.show', $media),
+            'delete_url' => $canDelete ? route('properties.images.destroy', [$property, $media]) : null,
+        ]);
 
-        return response()->json(['property' => $property->code, 'images' => $images]);
+        return response()->json([
+            'property' => $property->code,
+            'images' => $mediaByType->get('image', collect())->map($galleryItem),
+            'videos' => $mediaByType->get('video', collect())->map($galleryItem),
+        ]);
     }
 
     public function store(Request $request, Property $property)
