@@ -216,6 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!galleryItems.length) throw new Error('Không có ảnh hoặc video');
             if (galleryProperty) galleryProperty.textContent = payload.property || button.dataset.propertyCode || '';
             openGallery(0);
+            if (videos.length && galleryVideo) {
+                galleryVideo.muted = true;
+                galleryVideo.play().catch(() => {});
+            }
         } catch (error) {
             window.alert('Không thể tải ảnh hoặc video của căn này. Vui lòng thử lại.');
         } finally {

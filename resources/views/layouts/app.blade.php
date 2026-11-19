@@ -9,7 +9,7 @@
     <link rel="apple-touch-icon" href="{{ asset('images/favico.png') }}">
     <link rel="stylesheet" href="{{ asset('css/crm.css') }}">
     <link rel="stylesheet" href="{{ asset('css/pagination.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/light-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/light-theme.css') }}?v={{ filemtime(public_path('css/light-theme.css')) }}">
 </head>
 <body>
 <header class="topbar">
@@ -37,7 +37,7 @@
 @if($errors->any())<div class="flash error">{{ $errors->first() }}</div>@endif
 
 <main>@yield('content')</main>
-<script src="{{ asset('js/crm.js') }}"></script>
+<script src="{{ asset('js/crm.js') }}?v={{ filemtime(public_path('js/crm.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>
